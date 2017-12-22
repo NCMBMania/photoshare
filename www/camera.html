@@ -1,33 +1,43 @@
-    <ons-page class="main_pages"  id="camera-page">
-      <ons-toolbar>
-        <div class="center" id="toolbar-title">Camera</div>
-      </ons-toolbar>
-      <div class="camera-view"><ons-icon class="camera-icon" icon="ion-android-camera"></ons-icon></div>
-      <div class="camera-button"><ons-icon class="camera-icon" icon="fa-circle-o"></ons-icon></div>
+<ons-page class="main_pages"  id="camera-page">
+  <ons-toolbar>
+    <div class="center" id="toolbar-title">Camera</div>
+  </ons-toolbar>
+  <div class="camera-view">
+    <ons-icon class="camera-icon cameraPlaceholder" icon="ion-android-camera"></ons-icon>
+    <canvas id="preview" style="display:none;width:100%;height:100%;"></canvas>
+  </div>
+  <div class="camera-button">
+    <ons-icon class="camera-icon" onclick="selectImage()" icon="fa-circle-o"></ons-icon>
+    <div style="display:none">
+      <input type="file" id="cameraImageFile" />
+    </div>
+    <input type="hidden" id="location" />
+    <input type="hidden" id="latitude" />
+    <input type="hidden" id="longitude" />
+  </div>
 
-      <style type="text/css">
-        .camera-view {
-          width: 100%;
-          height: 60%;
-          text-align: center;
-          background-color: #cacaca;
-          display: table;
-        }
+  <style type="text/css">
+    .camera-view {
+      width: 320px;
+      height: 320px;
+      text-align: center;
+      background-color: #cacaca;
+      display: table;
+    }
 
-        .camera-icon {
-          vertical-align: middle !important;
-          font-size: 100px;
-          opacity: 0.4;
-          display: table-cell;
-        }
+    .camera-icon {
+      vertical-align: middle !important;
+      font-size: 100px;
+      opacity: 0.4;
+      display: table-cell;
+    }
 
-        .camera-button {
-          width: 100%;
-          height: 40%;
-          text-align: center;
-          display: table;
-        }
-      </style>
+    .camera-button {
+      width: 100%;
+      height: 32%;
+      text-align: center;
+      display: table;
+    }
+  </style>
 
-    </ons-page>
-
+</ons-page>

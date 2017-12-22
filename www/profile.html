@@ -3,7 +3,7 @@
         <div class="left">
           <ons-toolbar-button><ons-icon icon="ion-person-add"></ons-icon></ons-toolbar-button>
         </div>
-        <div class="center">david_graham</div>
+        <div class="center userName"></div>
         <div class="right">
           <ons-toolbar-button onclick="logout()"><ons-icon icon="ion-power"></ons-icon></ons-toolbar-button>
         </div>
@@ -18,8 +18,13 @@
         <div style="padding: 14px 6px 14px 16px;">
           <div class="profile_wrapper">
             <div class="profile_image_wrapper">
-              <ons-icon size="24px" icon="ion-ios-plus"></ons-icon>
-              <img src="img/profile-image-08.png">
+              <ons-icon size="24px" icon="ion-ios-plus" onclick="uploadProfileImage()">
+                
+              </ons-icon>
+              <img class="profileImage" src="img/profile-image-08.png">
+              <div style="display:none">
+                <input type="file" id="profileImageFile" />
+              </div>
             </div>
             <div class="profile_info_wrapper">
               <div class="profile_info_numbers">
@@ -37,11 +42,11 @@
                 </div>
               </div>
               <div>
-                <ons-button class="profile_info_button" id="edit_button" modifier="large">Edit Your Profile</ons-button>
+                <ons-button class="profile_info_button" id="edit_button" onclick="editProfile()" modifier="large">Edit Your Profile</ons-button>
               </div>
             </div>
           </div>
-          <div><p class="profile_extra_wrapper"> David Graham</p></div>
+          <div><p class="profile_extra_wrapper realName" id="editRealName"></p></div>
         </div>
 
 
@@ -166,22 +171,15 @@
         </div>
 
         <div id="grid_view">
-          <ons-row>
-            <ons-col class="grid_wrapper">
-              <img class="grid_thumbnail" src="img/post-01.jpg">
-            </ons-col>
-
-            <ons-col class="grid_wrapper">
-              <img class="grid_thumbnail" src="img/post-02.jpg">
-            </ons-col>
-
-            <ons-col class="grid_wrapper">
-              <img class="grid_thumbnail" src="img/post-03.jpg">
-            </ons-col>
+          
           </ons-row>
         </div>
       </div>
-
+<template id="gridTemplate">
+  <ons-col class="grid_wrapper" id="{{id}}">
+    <img class="grid_thumbnail" src="{{photo.fileUrl}}">
+  </ons-col>
+</template>
       <style type="text/css">
         .profile_wrapper {
           display: inline-flex;
