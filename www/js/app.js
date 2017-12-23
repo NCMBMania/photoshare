@@ -1,16 +1,13 @@
-const applicationKey = 'YOUR_APPLICATION_KEY';
-const clientKey = 'YOUR_CLIENT_KEY';
-const applicationId = 'YOUR_APPLICATION_ID';
+const applicationKey = 'b347bafb25296ae896e06684068574f4332e2526626f78b475e799ca5882901e';
+const clientKey = '4895215f6469f325e6278afdb8d0178ddb88659964fd2b0e73ed4db4417bd462';
+const applicationId = 'LFjLhn8sZS05V76R';
 const ncmb = new NCMB(applicationKey, clientKey);
 
 const noProfileImage = 'img/user.png';
+const noProfileName  = 'No name';
 
 const myPhotos = new Proxy({}, {
   set: (target, key, value) => {
-    if (key === 'length') {
-      target.length = value;
-      return;
-    }
     if (!target[key]) {
       target[key] = value;
       updateMyPhotos();
@@ -21,10 +18,6 @@ const myPhotos = new Proxy({}, {
 
 const timelinePhotos = new Proxy({}, {
   set: (target, key, value) => {
-    if (key === 'length') {
-      target.length = value;
-      return;
-    }
     if (!target[key]) {
       target[key] = value;
       updateTimeline(target);
@@ -40,13 +33,13 @@ document.addEventListener('init', function(event) {
       .set('sessionTest', !user.sessionTest)
       .update()
       .then(() => {
+        $('.userName').html(user.userName);
+        $('.realName').html(user.realName || noProfileName);
+        $('.profileImage').attr('src', user.profileImage || noProfileImage);
       })
       .catch((err) => {
         $('#nav')[0].pushPage('register.html', {animation: 'fade'});
       });
-    $('.userName').html(user.userName);
-    $('.realName').html(user.realName || 'No name');
-    $('.profileImage').attr('src', user.profileImage || noProfileImage);
   }
   if (page.id === 'main') {
     if (!user) {
@@ -61,6 +54,7 @@ document.addEventListener('init', function(event) {
     Photo
       .limit(10)
       .include('user')
+      .order('createDate')
       .fetchAll()
       .then((photos) => {
         for (let i = 0; i < photos.length; i += 1) {
@@ -77,6 +71,7 @@ document.addEventListener('init', function(event) {
       .then((photos) => {
         for (let i = 0; i < photos.length; i += 1) {
           const photo = photos[i];
+          photo.user = user;
           myPhotos[photo.objectId] = photo;
         }
       })
@@ -270,41 +265,75 @@ const canvasToBlob = () => {
   return blob;
 }
 
+const getAddress = (exif) => {
+  const results = {
+    latitude: '',
+    longitude: '',
+    address: ''
+  };
+  return new Promise((res, rej) => {
+    const lat = exif.lat;
+    const long = exif.long;
+    if (lat && long) {
+    }else{
+      return res(results);
+    }
+    results.latitude = lat[0] + (lat[1]/60) + (lat[2]/(60*60));
+    results.longitude = long[0] + (long[1]/60) + (long[2]/(60*60));
+    $.ajax({
+      url: `https://geoapi.heartrails.com/api/json?method=searchByGeoLocation&y=${results.latitude}&x=${results.longitude}`,
+      type: 'GET',
+      dataType: 'jsonp'
+    })
+    .then((response) => {
+      const location = response.response.location[0];
+      if (location) {
+        results.address = `${location.prefecture}${location.city}${location.town}`;
+        res(results);
+      }
+    }, (err) => {
+      res(results);
+    });
+  });
+}
+
+const loadExif = (img) => {
+  return new Promise((res, rej) => {
+    EXIF.getData(img, function() {
+      const lat = EXIF.getTag(this, "GPSLatitude");
+      const long = EXIF.getTag(this, "GPSLongitude");
+      const orientation = EXIF.getTag(this, "Orientation");
+      res({
+        lat: lat,
+        long: long,
+        orientation: orientation
+      });
+    });
+  })
+}
+
 $(document).on('change', '#cameraImageFile', (e) => {
   const file = e.target.files[0];
   const fr = new FileReader();
   fr.onload = (e) => {
     const img = new Image();
     img.onload = (e) => {
-      EXIF.getData(img, function() {
-        const lat = EXIF.getTag(this, "GPSLatitude");
-        const long = EXIF.getTag(this, "GPSLongitude");
-        const orientation = EXIF.getTag(this, "Orientation");
-        if (lat && long) {
-          const latitude = lat[0] + (lat[1]/60) + (lat[2]/(60*60));
-          const longitude = long[0] + (long[1]/60) + (long[2]/(60*60));
-          $('#latitude').val(latitude);
-          $('#longitude').val(longitude);
-          $.ajax({
-            url: `https://geoapi.heartrails.com/api/json?method=searchByGeoLocation&y=${latitude}&x=${longitude}`,
-            type: 'GET',
-            dataType: 'jsonp'
-          })
-          .then((response) => {
-            const location = response.response.location[0];
-            if (location) {
-              $('#location').val(`${location.prefecture}${location.city}${location.town}`)
-            }
-          }, (err) => {
-            console.log(err);
-          });
-        }
-        drawImage(img, orientation);
-        $('.cameraPlaceholder').hide();
-        $('#preview').show();
-        waitAndUpload();
-      });
-    }
+      loadExif(img)
+        .then((exif) => {
+          drawImage(img, exif.orientation);
+          waitAndUpload();
+          return getAddress(exif)
+        })
+        .then((results) => {
+          $('.cameraPlaceholder').hide();
+          $('#preview').show();
+          $('#latitude').val(results.latitude);
+          $('#longitude').val(results.longitude);
+          $('#location').val(results.address);
+        }, (err) => {
+          console.log(err);
+        });
+    };
     img.src = e.target.result;
   };
   fr.readAsDataURL(file);
@@ -317,6 +346,7 @@ const selectImage = () => {
 const fileUpload = (fileName, file) => {
   return new Promise((res, rej) => {
     const user = ncmb.User.getCurrentUser();
+    // アクセス権限の設定
     const acl = new ncmb.Acl();
     acl
       .setPublicReadAccess(true)
@@ -325,9 +355,6 @@ const fileUpload = (fileName, file) => {
       .upload(fileName, file, acl)
       .then((f) => {
         res(filePath(f.fileName));
-      })
-      .then(() => {
-        res();
       })
       .catch((err) => {
         rej(err);
@@ -345,7 +372,9 @@ $(document).on('change', '#profileImageFile', (e) => {
   fileUpload(`${user.objectId}-${file.name}`, file)
     .then((fileUrl) => {
       $('.profileImage').attr('src', fileUrl);
+      // 自分の設定を更新
       return user
+        .set('authData', {}) // 執筆時点ではこれがないと更新に失敗します
         .set('profileImage', fileUrl)
         .update()
     })
@@ -415,7 +444,6 @@ const logout = () => {
 };
 
 const editProfile = () => {
-  // const realName = S('#editRealName');
   $('#editRealName').html(ons.createElement(`
     <ons-input modifier="underbar" onblur="updateRealName(event)" style="width:50%" />
   `));
@@ -435,7 +463,7 @@ const updateRealName = (e) => {
     .update()
     .then(() => {
       // 処理成功した場合は何も出力しない
-      $('#editRealName').html(realName);
+      $('.realName').html(realName);
     })
     .catch((err) => {
       ons.notification.alert(err.message);
@@ -454,6 +482,9 @@ document.addEventListener('show', function(event) {
   if (page.id == 'camera-page') {
     $('.cameraPlaceholder').show();
     $('#preview').hide();
+    $('#latitude').val('');
+    $('#longitude').val('');
+    $('#location').val('');
   }
 });
 
