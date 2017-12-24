@@ -7,19 +7,26 @@
     <canvas id="preview" style="display:none;width:100%;height:100%;"></canvas>
   </div>
   <div class="camera-button">
-    <ons-icon class="camera-icon" onclick="selectImage()" icon="fa-circle-o"></ons-icon>
-    <div style="display:none">
-      <input type="file" id="cameraImageFile" />
-    </div>
+    <ons-icon class="camera-icon select-photo" icon="fa-circle-o">
+    </ons-icon>
+    <input type="file" id="cameraImageFile" />
     <input type="hidden" id="location" />
     <input type="hidden" id="latitude" />
     <input type="hidden" id="longitude" />
   </div>
 
   <style type="text/css">
+    #cameraImageFile {
+      opacity: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+    }
     .camera-view {
-      width: 320px;
-      height: 320px;
+      width: calc(100vmin);
+      height: calc(100vmin);
       text-align: center;
       background-color: #cacaca;
       display: table;

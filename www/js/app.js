@@ -1,6 +1,6 @@
-const applicationKey = 'b347bafb25296ae896e06684068574f4332e2526626f78b475e799ca5882901e';
-const clientKey = '4895215f6469f325e6278afdb8d0178ddb88659964fd2b0e73ed4db4417bd462';
-const applicationId = 'LFjLhn8sZS05V76R';
+const applicationKey = 'YOUR_APPLICATION_KEY';
+const clientKey = 'YOUR_CLIENT_KEY';
+const applicationId = 'YOUR_APPLICATION_ID';
 const ncmb = new NCMB(applicationKey, clientKey);
 
 const noProfileImage = 'img/user.png';
@@ -47,9 +47,9 @@ document.addEventListener('init', function(event) {
       $('#nav')[0].pushPage('register.html', {animation: 'fade'});
     }
   }
-  const Photo = ncmb.DataStore('Photo');
   if (page.id == "home-page") {
     const stories = $('#stories');
+    const Photo = ncmb.DataStore('Photo');
     generateStoryBubbles(stories);
     Photo
       .limit(10)
@@ -64,20 +64,27 @@ document.addEventListener('init', function(event) {
       });
   }
   if (page.id == 'profile-page') {
-    Photo
-      .limit(20)
-      .equalTo('userObjectId', user.objectId)
-      .fetchAll()
-      .then((photos) => {
-        for (let i = 0; i < photos.length; i += 1) {
-          const photo = photos[i];
-          photo.user = user;
-          myPhotos[photo.objectId] = photo;
-        }
-      })
+    getMyPhotos();
   }
 });
 
+const getMyPhotos = () => {
+  const user = ncmb.User.getCurrentUser();
+  if (user) {
+    const Photo = ncmb.DataStore('Photo');
+    Photo
+    .limit(20)
+    .equalTo('userObjectId', user.objectId)
+    .fetchAll()
+    .then((photos) => {
+      for (let i = 0; i < photos.length; i += 1) {
+        const photo = photos[i];
+        photo.user = user;
+        myPhotos[photo.objectId] = photo;
+      }
+    });
+  }
+}
 const updateMyPhotos = () => {
   let index = 0;
   let row = 3;
@@ -339,10 +346,6 @@ $(document).on('change', '#cameraImageFile', (e) => {
   fr.readAsDataURL(file);
 });
 
-const selectImage = () => {
-  $('#cameraImageFile').click();
-};
-
 const fileUpload = (fileName, file) => {
   return new Promise((res, rej) => {
     const user = ncmb.User.getCurrentUser();
@@ -360,10 +363,6 @@ const fileUpload = (fileName, file) => {
         rej(err);
       })
   });
-};
-
-const uploadProfileImage = () => {
-  $('#profileImageFile').click();
 };
 
 $(document).on('change', '#profileImageFile', (e) => {
@@ -411,6 +410,8 @@ const login = () => {
       return ncmb.User.login(userName, password)
     })
     .then((user) => {
+      // 写真の取得
+      getMyPhotos();
       // ログイン成功したらメイン画面に遷移します
       $('#nav')[0].pushPage('main.html', {animation: 'fade'});
     })
@@ -479,12 +480,28 @@ document.addEventListener('show', function(event) {
     var channels = page.querySelector('#channels');
     generateStoryBubbles(channels);
   }
+  
+  if (page.id == "profile-page") {
+    page.querySelector('#profileImageUpload').addEventListener('click', (e) => {
+      if (ons.platform.isIOS()) {
+        $(e.target).click();
+      }
+      page.querySelector('#profileImageFile').click();
+    });
+  }
+  
   if (page.id == 'camera-page') {
     $('.cameraPlaceholder').show();
     $('#preview').hide();
     $('#latitude').val('');
     $('#longitude').val('');
     $('#location').val('');
+    page.querySelector('.select-photo').addEventListener('click', (e) => {
+      if (ons.platform.isIOS()) {
+        $(e.target).click();
+      }
+      page.querySelector('#cameraImageFile').click();
+    });
   }
 });
 
