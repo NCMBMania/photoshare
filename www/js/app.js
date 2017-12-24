@@ -1,6 +1,7 @@
 const applicationKey = 'YOUR_APPLICATION_KEY';
 const clientKey = 'YOUR_CLIENT_KEY';
 const applicationId = 'YOUR_APPLICATION_ID';
+
 const ncmb = new NCMB(applicationKey, clientKey);
 
 const noProfileImage = 'img/user.png';
@@ -436,7 +437,7 @@ const logout = () => {
     return ncmb.User.logout();
   })
   .then(() => {
-    // 処理完了したら登録/ログイン画面に遷移します
+      // 処理完了したら登録/ログイン画面に遷移します
     $('#nav').pushPage('register.html', {animation: 'fade'});
   })
   .catch(() => {
