@@ -1,9 +1,6 @@
 
 <ons-page class="main_pages" id="home-page">
   <ons-toolbar>
-    <div class="left">
-      <ons-toolbar-button><ons-icon icon="ion-ios-camera-outline"></ons-icon></ons-toolbar-button>
-    </div>
     <div class="center">Home Page</div>
     <div class="right">
       <ons-toolbar-button><ons-icon icon="ion-ios-paperplane-outline"></ons-icon></ons-toolbar-button>
@@ -11,7 +8,6 @@
   </ons-toolbar>
 
   <div>
-    <ons-carousel class="stories-tab" id="stories" auto-refresh swipeable overscrollable item-width="70px"></ons-carousel>
     <div class='posts'>
     </div>
   </div>
@@ -20,7 +16,7 @@
   <ons-card id="{{id}}" class="post">
     <ons-list-item class="post_title">
       <div class="left">
-        <img class="list-item__thumbnail" src="{{photo.user.profileImage}}" >
+        <img class="profile_image list-item__thumbnail" src="{{photo.user.profileImage}}" >
       </div>
       <div class="center">
         <div class="list-item__title"><b>{{photo.user.userName}}</b></div>
@@ -33,29 +29,56 @@
       </div>
     </ons-list-item>
 
-    <div style="text-align: center; position: relative;" ondblclick="like(1)">
-      <ons-icon size="150px" id="post-like-1" class="post-like" icon="ion-ios-heart"></ons-icon>
+    <div style="text-align: center; position: relative;" ondblclick="like('{{id}}')">
+      <ons-icon size="150px" id="post-like-{{id}}" class="post-like" icon="ion-ios-heart"></ons-icon>
       <img class="post-image" width="320" height="320" src="{{photo.fileUrl}}">
     </div>
 
     <ons-list-item class="post-button-bar" modifier="nodivider">
       <div class="center" style="padding-top: 0px">
-        <ons-button class="post-button" modifier="quiet" onclick="like(1)"><ons-icon id="button-post-like-1" icon="ion-ios-heart-outline"></ons-icon></ons-button>
-        <ons-button class="post-button" modifier="quiet"><ons-icon icon="ion-ios-chatbubble-outline"></ons-icon></ons-button>
+        <ons-button class="post-button" modifier="quiet" onclick="like('{{id}}')">
+          {{#photo.liked}}
+            <ons-icon id="button-post-like-{{id}}" icon="ion-ios-heart" class="ion-ios-heart like"></ons-icon>
+          {{/photo.liked}}
+          {{^photo.liked}}
+            <ons-icon id="button-post-like-{{id}}" icon="ion-ios-heart-outline"></ons-icon>
+          {{/photo.liked}}
+        </ons-button>
+        <ons-button class="post-button" modifier="quiet" onclick="comment('{{id}}')"><ons-icon icon="ion-ios-chatbubble-outline"></ons-icon></ons-button>
         <ons-button class="post-button" modifier="quiet"><ons-icon icon="ion-ios-paperplane-outline"></ons-icon></ons-button>
       </div>
       <div class="right corner-button bookmark">
         <ons-button class="post-button" modifier="quiet"><ons-icon icon="md-bookmark-outline"></ons-icon></ons-button>
       </div>
     </ons-list-item>
-
     <div class="post-like-info">
-      {{favorite_message}}
+      {{{favorite_message}}}
     </div>
     <div class="post-caption"><b>{{photo.user.userName}}</b> {{photo.message}} </div>
     <div class="post-time">{{photo.timeAgo}}</div>
+    
+    <div class="post-comments">
+      {{{messages}}}
+    </div>
   </ons-card>
 </template>
+
+<template id="comment">
+  {{#messages}}
+  <ons-list>
+    <ons-list-item modifier="nodivider">
+      <div class="left">
+        <img class="list-item__thumbnail" src="{{profileImage}}">
+      </div>
+      <div class="center">
+        <span class="list-item__title">{{username}}</span>
+        <span class="list-item__subtitle">{{comment}}</span>
+      </div>
+    </ons-list-item>
+  </ons-list>
+  {{/messages}}
+</template>
+
 <style type="text/css">
   .stories-tab {
     padding: 8px 15px;
