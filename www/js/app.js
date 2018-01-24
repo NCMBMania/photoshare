@@ -1,6 +1,7 @@
 const applicationKey = 'b347bafb25296ae896e06684068574f4332e2526626f78b475e799ca5882901e';
 const clientKey = '4895215f6469f325e6278afdb8d0178ddb88659964fd2b0e73ed4db4417bd462';
 const applicationId = 'LFjLhn8sZS05V76R';
+const senderId = '';
 
 const ncmb = new NCMB(applicationKey, clientKey);
 let current_user = ncmb.User.getCurrentUser();
@@ -37,6 +38,18 @@ const timelinePhotos = new Proxy({}, {
   }
 });
 
+document.addEventListener("deviceready", (event) => {
+  NCMB.monaca.setHandler((jsonData) => {
+    const Photo = ncmb.DataStore('Photo');
+    Photo
+      .equalTo('objectId', jsonData.photoObjectId)
+      .fetch()
+      .then((photo) => {
+        $('#nav')[0].pushPage('single.html', {animation: 'slide', data: {photo: photo}});
+      });
+  });
+});
+
 // 初期表示処理
 document.addEventListener('init', function(event) {
   var page = event.target;
@@ -45,6 +58,37 @@ document.addEventListener('init', function(event) {
     if (!current_user) {
       // ログインページを表示
       $('#nav')[0].pushPage('register.html', {animation: 'fade'});
+    } else {
+      if (NCMB.monaca) {
+        window.NCMB.monaca.setDeviceToken(
+          applicationKey,
+          clientKey,
+          senderId,
+          (result) => {
+            console.log(result);
+          },
+          (err) => alert(JSON.stringify(err))
+        );
+      }
+      let timerId = setInterval(() => {
+        window.NCMB.monaca.getInstallationId(id => {
+          if (!id) {
+            return;
+          }
+          ncmb.Installation
+            .equalTo('objectId', id)
+            .fetch()
+            .then((installation) => {
+              return installation
+                .set('userObjectId', current_user.objectId)
+                .update();
+            })
+            .then(() => {
+              timerId = null;
+            })
+            .catch(err => alert(JSON.stringify(err)))
+        });
+      }, 10000);
     }
   }
   if (page.id == "home-page") {
@@ -290,7 +334,6 @@ document.addEventListener('show', function(event) {
   }
 });
 
-
 const showSinglePage = (dom, photo) => { 
   const Like = ncmb.DataStore('Like');
   Like
@@ -466,6 +509,32 @@ const likeCreateOrUpdate = (photoObjectId, comment) => {
       return like.objectId ? like.update() : like.save();
     })
     .then((like) => {
+      // コメントだったらプッシュ通知を送る
+      if (!comment) {
+        return;
+      }
+      const Photo = ncmb.DataStore('Photo');
+      return Photo
+        .equalTo('objectId', photoObjectId)
+        .fetch()
+    })
+    .then((photo) => {
+      if (!comment) {
+        return;
+      }
+      const push = new ncmb.Push();
+      return push
+        .set("immediateDeliveryFlag", true)
+        .set("searchCondition", {"userObjectId": photo.userObjectId})
+        .set("message", `You got a new comment from ${current_user.userName} !`)
+        .set("userSettingValue", {
+          photoObjectId: photo.objectId
+        })
+        .set("target", ["ios", "android"])
+        .send();
+    })
+    .then((push) => {
+      
     })
 }
 
@@ -580,6 +649,7 @@ const drawImage = (img, orientation) => {
 };
 
 const waitAndUpload = () => {
+  let photoObjectId;
   setTimeout(() => {
     ons.notification.confirm({
       message: 'Do you want to upload?'
@@ -616,8 +686,6 @@ const waitAndUpload = () => {
         .set('userObjectId', current_user.objectId)
         .set('fileUrl', fileUrl)
         .set('message', message)
-        .set('comments', [])
-        .set('favorites', [])
         .set('location', location)
         .set('acl', acl);
       if (latitude != '' && longitude != '') {
@@ -631,13 +699,38 @@ const waitAndUpload = () => {
       $('#tabbar')[0].setActiveTab(0);
       photo.user = ncmb.User.getCurrentUser();
       myPhotos[photo.objectId] = photo;
+      photoObjectId = photo.objectId;
       let photo_count = current_user.photo_count || 0;
       photo_count++;
       current_user.set('photo_count', photo_count);
       return current_user.update();
     })
     .then(() => {
-      
+      // フォロワーに対してプッシュ通知を送る
+      ncmb.User
+        .equalTo('follows', current_user.objectId)
+        .count()
+        .fetchAll()
+        .then((users) => {
+          if (users.count === 0) {
+            return;
+          }
+          const userIds = users.map(user => {
+            return user.objectId
+          });
+          const push = new ncmb.Push();
+          return push
+            .set("immediateDeliveryFlag", true)
+            .set("message", `New photo uploaded by ${current_user.userName} !`)
+            .set("searchCondition", {
+              userObjectId: {"$in": userIds}
+            })
+            .set("userSettingValue", {
+              photoObjectId: photoObjectId
+            })
+            .set("target", ["ios", "android"])
+            .send();
+        });
     })
     .catch((err) => {
       console.log(err);
