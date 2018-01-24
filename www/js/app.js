@@ -40,8 +40,8 @@ const timelinePhotos = new Proxy({}, {
 // 初期表示処理
 document.addEventListener('init', function(event) {
   var page = event.target;
-  loginCheck();
   if (page.id === 'main') {
+    loginCheck();
     if (!current_user) {
       // ログインページを表示
       $('#nav')[0].pushPage('register.html', {animation: 'fade'});
@@ -52,6 +52,9 @@ document.addEventListener('init', function(event) {
   }
   if (page.id == 'profile-page') {
     getMyPhotos();
+  }
+  if (page.id == "search-page") {
+    $('.loading').hide();
   }
 });
 
@@ -105,12 +108,95 @@ const logout = () => {
   .then(() => {
     // 処理完了したら登録/ログイン画面に遷移します
     current_user = null;
-    $('#nav').pushPage('register.html', {animation: 'fade'});
+    $('#nav')[0].pushPage('register.html', {animation: 'fade'});
   })
-  .catch(() => {
+  .catch((err) => {
     // 確認ダイアログでCancelを選んだ場合
+    console.log(err);
   })
 };
+
+const searchPhoto = (e) => {
+  const dom = $('#search-page');
+  const photoView = dom.find('#photos');
+  const Photo = ncmb.DataStore('Photo');
+  if (e.keyCode === 13 && 
+     (e.shiftKey === false || e.ctrlKey === false || e.altKey === false)
+   ) {
+  } else {
+    // 通常入力
+    return true;
+  }
+  // 検索実行
+  if (e.target.value.trim() === '') {
+    return false;
+  }
+  // スペースで分割
+  const keywords = e.target.value.split(' ');
+  const aryOr = [];
+  for (let i = 0; i < keywords.length; i += 1) {
+    const subPhoto = ncmb.DataStore('Photo');
+    const keyword = keywords[i];
+    // 配列の中に検索条件を追加していきます
+    aryOr.push(
+      Photo
+        .regularExpressionTo('message', `.*${keyword}.*`)
+    );
+  }
+  // 複数条件指定された場合は or 検索とします
+  const promise = aryOr.length === 1 ? 
+    showPhotos(photoView, aryOr[0]) :
+    showPhotos(photoView, Photo.or(aryOr));
+}
+    
+const tapPhoto = (objectId) => {
+  const Photo = ncmb.DataStore('Photo');
+  Photo
+    .equalTo('objectId', objectId)
+    .fetch()
+    .then((photo) => {
+      $('#nav')[0].pushPage('single.html', {animation: 'slide', data: {photo: photo}});
+    });
+}
+    
+const showPhotos = (dom, Photo) => {
+  return new Promise((res, rej) => {
+    $(dom).hide();
+    const thumbnailTemplate = $('#thumbnailTemplate').html();
+    Photo
+      .limit(20)
+      .include('user')
+      .order('-createDate')
+      .fetchAll()
+      .then((photos) => {
+        const thumbnail = Mustache.render(thumbnailTemplate, {
+          photos: photos
+        });
+        $(dom).html(ons.createElement(thumbnail));
+        $(dom).show();
+        $('.loading').hide();
+        res(photos);
+      });
+  });
+}
+
+const getMyPhotos = () => {
+  if (!current_user) {
+    return;
+  }
+  const Photo = ncmb.DataStore('Photo');
+  Photo
+  .limit(20)
+  .equalTo('userObjectId', current_user.objectId)
+  .fetchAll()
+  .then((photos) => {
+    for (let i = 0; i < photos.length; i += 1) {
+      const photo = photos[i];
+      photo.user = current_user;
+      myPhotos[photo.objectId] = photo;
+    }
+  });
+}
 
 const editProfile = () => {
   $('#editRealName').html(ons.createElement(`
@@ -118,31 +204,6 @@ const editProfile = () => {
   `));
 };
 
-const showPhotos = (dom) => {
-  return new Promise((res, rej) => {
-    $(dom).hide();
-    $(dom).empty();
-    const Photo = ncmb.DataStore('Photo');
-    Photo
-      .limit(20)
-      .include('user')
-      .order('-createDate')
-      .fetchAll()
-      .then((photos) => {
-        for (let i = 0; i < photos.length; i += 1) {
-          const photo = photos[i];
-          $(dom).append(ons.createElement(`
-            <ons-col class="search_wrapper">
-              <img class="search_thumbnail" src="${photo.fileUrl}" data-photo="${photo.objectId}">
-            </ons-col>
-          `));
-          $(dom).show();
-          $('.loading').hide();
-        }
-        res(photos);
-      });
-  });
-}
 const isFollow = (user) => {
   return current_user.follows && current_user.follows.indexOf(user.objectId) > -1
 }
@@ -211,9 +272,6 @@ const showUserPage = (dom, user) => {
 
 document.addEventListener('show', function(event) {
   var page = event.target;
-  if (page.id == "search-page") {
-    showSearchPage($(page));
-  }
   
   if (page.id == 'single-page') {
     showSinglePage($(page), page.data.photo);
@@ -232,21 +290,6 @@ document.addEventListener('show', function(event) {
   }
 });
 
-const showSearchPage = (dom) => {
-  const photoView = dom.find('#photos');
-  showPhotos(photoView)
-    .then((photos) => {
-      dom.on('click', '.search_thumbnail', (e) => {
-        const objectId = $(e.target).data('photo');
-        const photo = photos.filter((photo) => {
-          if (photo.objectId == objectId) {
-            return photo;
-          }
-        })[0];
-        $('#nav')[0].pushPage('single.html', {animation: 'slide', data: {photo: photo}});
-      });
-    });
-}
 
 const showSinglePage = (dom, photo) => { 
   const Like = ncmb.DataStore('Like');
@@ -423,7 +466,6 @@ const likeCreateOrUpdate = (photoObjectId, comment) => {
       return like.objectId ? like.update() : like.save();
     })
     .then((like) => {
-      console.log(like);
     })
 }
 
@@ -708,7 +750,7 @@ const appendPhoto = (dom, photo, like) => {
       ${like.users.length - 1} other liked this.`;
   }
   const template = $('#photo').html();
-  photo.liked   = like && like.users.indexOf(current_user.objectId) > -1 ? true : false;
+  photo.liked   = like && Object.keys(like).length > 0 && like.users.indexOf(current_user.objectId) > -1 ? true : false;
   photo.timeAgo = timeago().format(photo.createDate);
   const messageTemplate = $('#comment').html();
   const messages = Mustache.render(messageTemplate, {
@@ -776,25 +818,6 @@ const loadTimeline = () => {
       }
     });
 }
-
-// 自分の写真を読み込みます
-const getMyPhotos = () => {
-  if (current_user) {
-    const Photo = ncmb.DataStore('Photo');
-    Photo
-    .limit(20)
-    .equalTo('userObjectId', current_user.objectId)
-    .fetchAll()
-    .then((photos) => {
-      for (let i = 0; i < photos.length; i += 1) {
-        const photo = photos[i];
-        photo.user = current_user;
-        myPhotos[photo.objectId] = photo;
-      }
-    });
-  }
-}
-
 
 $(document).on('change', '#profileImageFile', (e) => {
   const file = e.target.files[0];

@@ -1,23 +1,24 @@
     <ons-page class="main_pages"  id="search-page">
       <ons-toolbar>
-        <div class="center"><ons-search-input class="search_box"  placeholder="Search"></ons-search-input></div>
+        <div class="center"><ons-search-input id="search" class="search_box" onkeypress="searchPhoto(event)" placeholder="Search"></ons-search-input></div>
       </ons-toolbar>
 
       <div>
-
-        <!-- Same as the home page, the carousel is populated with stories when this page is displayed -->
-
-        <ons-carousel class="stories-tab" id="channels" auto-refresh swipeable overscrollable item-width="70px"></ons-carousel>
-
-        <!-- The combination of <ons-row> and <ons-col> elements are used to dispaly the pictures (the search results) in grid view -->
-
         <div>
           <ons-progress-circular indeterminate class="loading"></ons-progress-circular>
           <ons-row id="photos">
           </ons-row>
         </div>
       </div>
-
+      <template id="thumbnailTemplate">
+        <div>
+          {{#photos}}
+            <ons-col>
+              <img class="search_thumbnail" onclick="tapPhoto('{{objectId}}')" src="{{fileUrl}}">
+            </ons-col>
+          {{/photos}}
+        </div>
+      </template>
       <style type="text/css">
         .stories-tab {
           padding-top: 8px;
