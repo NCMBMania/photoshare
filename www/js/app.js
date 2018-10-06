@@ -49,20 +49,7 @@ document.addEventListener('init', function(event) {
     }
   }
   if (page.id == "home-page") {
-    const stories = $('#stories');
-    const Photo = ncmb.DataStore('Photo');
-    generateStoryBubbles(stories);
-    Photo
-      .limit(10)
-      .include('user')
-      .order('createDate')
-      .fetchAll()
-      .then((photos) => {
-        for (let i = 0; i < photos.length; i += 1) {
-          const photo = photos[i];
-          timelinePhotos[photo.objectId] = photo;
-        }
-      });
+      loadTimeline();
   }
   if (page.id == 'profile-page') {
     getMyPhotos();
@@ -86,6 +73,7 @@ const getMyPhotos = () => {
     });
   }
 }
+
 const updateMyPhotos = () => {
   let index = 0;
   let row = 3;
@@ -112,6 +100,41 @@ const updateMyPhotos = () => {
   }
   $('#grid_view').append(divRow);
 };
+
+// 写真を追加します
+const appendPhoto = (dom, photo, like) => {
+  const id = `post-${photo.objectId}`;
+  photo.location = photo.location || '';
+  if (!photo.user.profileImage)
+    photo.user.profileImage = noProfileImage;
+  let favorite_message = 'No one favorites this photo yet.';
+  if (like && Object.keys(like).length > 0) {
+    let who = 'someone';
+    if (like.users.indexOf(current_user.objectId) > -1) {
+      who = 'You';
+    }
+    favorite_message = `
+      <b> ${who} </b> and 
+      ${like.users.length - 1} other liked this.`;
+  }
+  const template = $('#photo').html();
+  photo.liked   = like && Object.keys(like).length > 0 && like.users.indexOf(current_user.objectId) > -1 ? true : false;
+  photo.timeAgo = timeago().format(photo.createDate);
+  const messageTemplate = $('#comment').html();
+  const messages = Mustache.render(messageTemplate, {
+    messages: like ? like.messages : []
+  });
+  const content = Mustache.render(template, {
+    id: id,
+    photo: photo,
+    favorite_message: favorite_message,
+    messages: messages
+  });
+  dom.prepend(ons.createElement(content));
+  $(dom).find('.profile_image').on('click', (e) => {
+    $('#nav')[0].pushPage('user.html', {animation: 'slide', data: {user: photo.user}});
+  });
+}
 
 const updateTimeline = (photos) => {
   for (let i in photos) {
@@ -320,6 +343,25 @@ const loadExif = (img) => {
   })
 }
 
+// タイムライン画像の読み込みです
+const loadTimeline = () => {
+  const Photo = ncmb.DataStore('Photo');
+  const follows = current_user.follows || [];
+  follows.push(current_user.objectId)
+  Photo
+    .limit(10)
+    .include('user')
+    .in('userObjectId', follows)
+    .order('createDate')
+    .fetchAll()
+    .then((photos) => {
+      for (let i = 0; i < photos.length; i += 1) {
+        const photo = photos[i];
+        timelinePhotos[photo.objectId] = photo;
+      }
+    });
+}
+
 $(document).on('change', '#cameraImageFile', (e) => {
   const file = e.target.files[0];
   const fr = new FileReader();
@@ -472,6 +514,66 @@ const updateRealName = (e) => {
     })
 }
 
+const showUserPage = (dom, user) => {
+  dom.find('.profileImage').attr('src', user.profileImage);
+  dom.find('.realName').text(user.realName);
+  dom.find('.photo_count').text(user.photo_count);
+  dom.find('.follower_count').text(user.follows ? user.follows.length : 0);
+  if (user.objectId == current_user.objectId) {
+    $(dom).find('.follow').attr('disabled', true);
+  }
+  ncmb.User
+    .equalTo('follows', user.objectId)
+    .count()
+    .fetchAll()
+    .then((result) => {
+      dom.find('.follow_count').text(result.count);
+    });
+  
+  // フォローしているかチェック
+  if (isFollow(user)) {
+    $(dom).find('.follow').text('Unfollow');
+  }
+  
+  // ユーザの写真を表示
+  const Photo = ncmb.DataStore('Photo');
+  Photo
+    .limit(20)
+    .equalTo('userObjectId', user.objectId)
+    .fetchAll()
+    .then((photos) => {
+      updateMyPhotos(dom.find('#grid_view'), photos);
+    });
+  
+  // フォロー/アンフォロー処理
+  $(dom).find('.follow').on('click', (e) => {
+    let follows = current_user.follows;
+    if (!follows) {
+      // まだデータがない場合は初期化
+      follows = [user.objectId];
+    } else {
+      // すでにフォローしているかチェック
+      if (follows.indexOf(user.objectId) > -1) {
+        // フォローしていればアンフォロー
+        follows = follows.filter((u) => {
+          return (u !== user.objectId);
+        });
+      } else {
+        // フォローしていなければフォロー
+        follows.push(user.objectId);
+      }
+    }
+    current_user
+      .set('follows', follows)
+      .set('authData', {})  // ないとエラーになります
+      .update()
+      .then(() => {
+        // フォロー状態をチェックしてボタンの文字を変更
+        $(dom).find('.follow').text(isFollow(user) ? 'Unfollow' : 'Follow');
+      })
+  });
+};
+
 //The show event listener does the same thing as the one above but on the search page when it's shown.
 
 document.addEventListener('show', function(event) {
@@ -503,6 +605,10 @@ document.addEventListener('show', function(event) {
       }
       page.querySelector('#cameraImageFile').click();
     });
+  }
+  
+  if (page.id == 'user-page') {
+    showUserPage($(page), page.data.user);
   }
 });
 
