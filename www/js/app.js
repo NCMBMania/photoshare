@@ -32,6 +32,7 @@ document.addEventListener('init', function(event) {
   if (user) {
     user
       .set('sessionTest', !user.sessionTest)
+      .set('authData', {})
       .update()
       .then(() => {
         $('.userName').html(user.userName);
