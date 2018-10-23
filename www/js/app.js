@@ -1,6 +1,6 @@
-const applicationKey = 'b347bafb25296ae896e06684068574f4332e2526626f78b475e799ca5882901e';
-const clientKey = '4895215f6469f325e6278afdb8d0178ddb88659964fd2b0e73ed4db4417bd462';
-const applicationId = 'LFjLhn8sZS05V76R';
+const applicationKey = 'YOUR_APPLICATION_KEY';
+const clientKey = 'YOUR_CLIENT_KEY';
+const applicationId = 'YOUR_APPLICATION_ID';
 
 const ncmb = new NCMB(applicationKey, clientKey);
 let current_user = ncmb.User.getCurrentUser();
