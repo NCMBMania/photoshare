@@ -105,8 +105,9 @@ document.addEventListener('init', function(event) {
 // ユーザ登録/ログイン処理です
 const login = () => {
   // 入力された情報です
-  const userName = document.getElementById('username').value;
-  const password = document.getElementById('password').value;
+  const page = $('#nav')[0].topPage;
+  const userName = page.querySelector('#username').value;
+  const password = page.querySelector('#password').value;
   // ユーザを作成します
   const user = new ncmb.User();
   user
