@@ -1,6 +1,6 @@
-const applicationKey = 'b347bafb25296ae896e06684068574f4332e2526626f78b475e799ca5882901e';
-const clientKey = '4895215f6469f325e6278afdb8d0178ddb88659964fd2b0e73ed4db4417bd462';
-const applicationId = 'LFjLhn8sZS05V76R';
+const applicationKey = 'YOUR_APPLICATION_KEY';
+const clientKey = 'YOUR_CLIENT_KEY';
+const applicationId = 'YOUR_APPLICATION_ID';
 const senderId = '';
 
 const ncmb = new NCMB(applicationKey, clientKey);
@@ -57,7 +57,7 @@ document.addEventListener('init', function(event) {
     loginCheck();
     if (!current_user) {
       // ログインページを表示
-      $('#nav')[0].pushPage('register.html', {animation: 'fade'});
+      $('#nav')[0].resetToPage('register.html', {animation: 'fade'});
     } else {
       if (NCMB.monaca) {
         window.NCMB.monaca.setDeviceToken(
@@ -70,6 +70,7 @@ document.addEventListener('init', function(event) {
           (err) => alert(JSON.stringify(err))
         );
       }
+      
       let timerId = setInterval(() => {
         window.NCMB.monaca.getInstallationId(id => {
           if (!id) {
@@ -92,7 +93,12 @@ document.addEventListener('init', function(event) {
     }
   }
   if (page.id == "home-page") {
-    loadTimeline();
+    if (!current_user) {
+      // ログインページを表示
+      $('#nav')[0].pushPage('register.html', {animation: 'fade'});
+    } else {
+      loadTimeline();
+    }
   }
   if (page.id == 'profile-page') {
     getMyPhotos();
@@ -153,7 +159,13 @@ const logout = () => {
   .then(() => {
     // 処理完了したら登録/ログイン画面に遷移します
     current_user = null;
-    $('#nav')[0].pushPage('register.html', {animation: 'fade'});
+    for (let key in myPhotos) {
+        delete myPhotos[key];
+    }
+    for (let key in timelinePhotos) {
+        delete timelinePhotos[key];
+    }
+    $('#nav')[0].resetToPage('register.html', {animation: 'fade'});
   })
   .catch((err) => {
     // 確認ダイアログでCancelを選んだ場合
@@ -217,6 +229,7 @@ const showPhotos = (dom, Photo) => {
         const thumbnail = Mustache.render(thumbnailTemplate, {
           photos: photos
         });
+        console.log(dom);
         $(dom).html(ons.createElement(thumbnail));
         $(dom).show();
         $('.loading').hide();
