@@ -1,7 +1,6 @@
 const applicationKey = 'YOUR_APPLICATION_KEY';
 const clientKey = 'YOUR_CLIENT_KEY';
 const applicationId = 'YOUR_APPLICATION_ID';
-const senderId = '';
 
 const ncmb = new NCMB(applicationKey, clientKey);
 let current_user = ncmb.User.getCurrentUser();
@@ -63,7 +62,6 @@ document.addEventListener('init', function(event) {
         window.NCMB.monaca.setDeviceToken(
           applicationKey,
           clientKey,
-          senderId,
           (result) => {
             console.log(result);
           },
@@ -718,33 +716,6 @@ const waitAndUpload = () => {
       photo_count++;
       current_user.set('photo_count', photo_count);
       return current_user.update();
-    })
-    .then(() => {
-      // フォロワーに対してプッシュ通知を送る
-      ncmb.User
-        .equalTo('follows', current_user.objectId)
-        .count()
-        .fetchAll()
-        .then((users) => {
-          if (users.count === 0) {
-            return;
-          }
-          const userIds = users.map(user => {
-            return user.objectId
-          });
-          const push = new ncmb.Push();
-          return push
-            .set("immediateDeliveryFlag", true)
-            .set("message", `New photo uploaded by ${current_user.userName} !`)
-            .set("searchCondition", {
-              userObjectId: {"$in": userIds}
-            })
-            .set("userSettingValue", {
-              photoObjectId: photoObjectId
-            })
-            .set("target", ["ios", "android"])
-            .send();
-        });
     })
     .catch((err) => {
       console.log(err);
